@@ -1,0 +1,31 @@
+var start_x = Player.X();
+var start_y = Player.Y();
+
+function Autostart()
+{
+	while(!Player.Dead())
+	{
+		while(!Player.Hidden())
+		{			
+			Orion.UseSkill("Hiding");			
+			//Orion.Wait(13000);
+			Orion.Wait(2000);
+
+		}
+		if(Player.Hidden())
+		{
+			Orion.UseSkill("Stealth");
+			Orion.Wait(1000);			
+			while(Player.Hidden())
+			{
+				Orion.Print("Moving 1");
+				Orion.WalkTo(start_x, (start_y+2), Player.Z(), 0);
+				Orion.Print("Moving 2");
+				Orion.WalkTo(start_x, (start_y-2), Player.Z(), 0);
+				Orion.Wait(500);
+			}
+		}
+		
+	}
+	
+}

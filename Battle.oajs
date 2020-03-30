@@ -1,0 +1,342 @@
+
+///////////
+var leatherKeys = "0x4093070A";
+var regKeys = "0x40AE75FD";
+var leatherButton = 60029;
+var regsButton = 60030;
+var blade = "0x400919D5";
+var scissors = "0x402C1DAE";
+var weapon = "0x4096EF53";
+var crop = "0x0C4F";
+var config = {		
+	'speculator_serial' : 0x00000350,
+	'quest_type'		: 0x14F0,
+	'quest_completed_color' : 0x04EA,
+	'quest_color'		: 0x01FF,
+	'quest_bag'			:'backpack',
+	'quest_completed_bag' : 0x400389DD,
+
+};
+
+var leather = {	
+	"0x1081" : "Leather",
+	"0x26B4" : "Scale",	
+	"0x1079" : "Hide"	
+}
+ 
+
+function zabor_blyat()
+{
+	var _zabor = Orion.FindType(0x0823)
+	if(_zabor.length)
+	{	
+		Orion.MoveItem(_zabor[0], 0, 'ground', Player.X(), Player.Y()-1)
+	}	
+}
+function get_crop()
+{
+	var _crop_serial = Orion.FindType(crop, 0xFFFF, 'ground');	
+	if(_crop_serial.length)
+	{
+		while(Orion.FindType(crop, 0xFFFF, 'ground') != null)
+		{
+			var _crop_serial = Orion.FindType(crop, 0xFFFF, 'ground');	
+			_crop_serial.forEach(function(_crop){
+				var _crop_object = Orion.FindObject(_crop);
+				if(_crop_object != null)
+				{
+					Orion.WalkTo(_crop_object.X(),_crop_object.Y(),_crop_object.Z(),0);
+					Orion.UseObject(_crop);
+					Orion.Wait(1000);
+				}
+			});
+		}
+	}
+}
+
+
+function vet()
+{
+	var target = ["0x000084C9"];
+	target.forEach(function(_target){
+		var mule = Orion.FindObject(_target);
+		Orion.Print(mule.Hits()+"/"+mule.MaxHits());
+		if(mule)
+		{
+			while(mule.Hits()<mule.MaxHits())
+			{
+				Orion.UseType("0x0E21");
+				Orion.WaitTargetObject(_target);
+				Orion.WaitJournal("You apply|You must|wait|You have been cured|You did|You fail|damaged|far away|You finish",Orion.Now(),Orion.Now()+10000);
+			}
+		}
+	});
+}
+
+
+function use_quest()
+{
+	//var _quest_name = "Wrong";
+	//var _quest_name = "Covetous";
+	var _quest_name = "Cemetery";
+	//var _quest_name = "Despise";
+
+	var _found = false;
+	var _quests = Orion.FindTypeEx(config["quest_type"],config["quest_color"],config["quest_bag"]);
+	if(_quests.length)
+	{
+		_quests.some(function(_quest){					
+			if( RegExp('\\b'+ _quest_name +'\\b').test(_quest.Properties()))
+			{
+				Orion.UseObject(_quest.Serial());
+				var _found = true;
+				return true;
+			}
+		});
+	}
+	/*if(!_found)
+	{
+		_quests.some(function(_quest){					
+			if( RegExp('\\b'+ _quest_name +'\\b').test(_quest.Name()))
+			{
+				Orion.UseObject(_quest.Serial());
+				return true;
+			}
+		});
+	}*/
+	/*
+	var _completed_quests = Orion.FindTypeEx(config["quest_type"],config["quest_completed_color"],config["quest_bag"]);
+	if(_completed_quests.length)
+	{
+		_completed_quests.forEach(function(_completed_quest){					
+			Orion.MoveItem(_completed_quest.Serial(), 0, config["quest_completed_bag"]);
+			Orion.Wait(1000);
+		});	
+	}*/
+}
+
+function AutoHealSelf()
+{ 
+	while(!Player.Dead())
+	{
+		while(Player.Hits()<(Player.MaxHits()-20) || Player.Poisoned())
+		{		
+			Orion.ClearJournal();
+			Orion.Say("[bandself");
+			Orion.Wait(500);
+			Orion.WaitJournal("You finish|not damaged|heal|barely help", Orion.Now(), Orion.Now()+20000);
+
+			if(Orion.Count('0x0E21') < 10)
+			{
+				Orion.Print('33', ' [' + Orion.Count('0x0E21') + '] bandage left ! ');
+			}
+		}					
+		Orion.Wait(500);							
+	}
+	Orion.Wait(1000);
+	Orion.IgnoreReset();	
+}
+
+function AttackNTS()
+{
+	Orion.Attack(Orion.TargetSystemSerial());
+}
+
+function AttackNextMob(){
+    //var Target = Orion.FindList('Mobs',ground,'near|mobile', 18, '');
+	var Target =  Orion.TargetSystemSerial();
+    	Orion.CharPrint(self, 1153, ">>"+Orion.FindObject(Target).Name());
+    	//Orion.WaitTargetObject(Target);
+    	//Orion.InvokeVirture('Honor');
+    	//Orion.Wait(200);
+    	Orion.WaitTargetObject(Target);
+    	Orion.Say('all kill');
+    	Orion.Wait(200);
+        Orion.Attack(Target);
+        Orion.Ignore(Target);
+}
+
+function ability()
+{
+	while(!Player.Dead())
+	{
+		if(!Orion.AbilityStatus('primary'))
+		{
+			if(Player.Mana()>28)
+				Orion.UseAbility('primary');
+		}
+		Orion.Wait(100);
+	}
+}
+
+
+
+//34 - leather
+//35 - regs
+function toKeys(keys,items,button)
+{
+	var _keysHook = Orion.CreateGumpHook(button);
+	var _keys = Orion.FindObject(keys);
+	if(_keys)
+	{
+		Orion.UseObject(keys);
+		if(Orion.WaitForGump(1000))
+		{					
+			var _keysGump = Orion.GetLastGump();
+			_keysGump.Select(_keysHook);			
+			for(_item in items)
+			{
+				var _itemPack = Orion.FindType(_item,-1,'backpack');
+				if(_itemPack && _itemPack.length > 0)
+				{
+					_itemPack.forEach(function(itemToPack){
+						Orion.Wait(500);										
+						Orion.CancelWaitTarget();					
+						Orion.Wait(100);
+						Orion.TargetObject(itemToPack);
+						Orion.Wait(500);					
+					});
+				}
+			}
+		}
+
+		Orion.Wait(1000);
+		Orion.UseObject(keys);
+		Orion.WaitForGump(1000);
+		var _ingotGumpClose = Orion.GetLastGump();
+			_ingotGumpClose.Select(Orion.CreateGumpHook(0));				
+		Orion.Wait(1000);
+
+		if (Orion.HaveTarget())				
+		    Orion.CancelTarget();				
+	}
+}
+
+function claimCorpses()
+{
+		if(Orion.HaveTarget())
+			Orion.CancelTarget();
+	var corpses = Orion.FindType('0x2006', '-1', "ground", 'gray', 10);		
+	if(corpses && corpses.length > 0)
+	{		
+		corpses.forEach(function(corpse)
+		{			
+			Orion.Say("[claim");	
+			Orion.WaitJournal("Choose a corpse", Orion.Now(), Orion.Now()+1000);
+			Orion.TargetObject(corpse);
+			Orion.WaitJournal("cannot be seen|You did|That is|Choose another", Orion.Now(), Orion.Now()+1000);
+		});
+		Orion.Wait(500);
+		if(Orion.HaveTarget())
+			Orion.CancelTarget();
+	}
+}
+
+function claimAllCorpses()
+{
+	var corpses = Orion.FindType('0x2006', '-1', "ground", 'gray', 10);		
+	if(corpses && corpses.length > 0)
+	{
+		if(Orion.HaveTarget())
+			Orion.CancelTarget();		
+		corpses.forEach(function(corpse)
+		{			
+			Orion.Say("[claimall");	
+			Orion.WaitJournal("Choose a corpse", Orion.Now(), Orion.Now()+1000);
+			Orion.TargetObject(corpse);
+			Orion.WaitJournal("cannot be seen|You did|That is|Choose another", Orion.Now(), Orion.Now()+1000);
+		});
+		Orion.Wait(500);
+		if(Orion.HaveTarget())
+			Orion.CancelTarget();
+	}
+}
+
+function getWeaponInfo(serial)
+{
+	var result = {};
+	var exp = 0;
+	var lvl = 0;
+	var object = Orion.FindObject(serial);
+	if(object != null)
+	{
+		var properties = object.Properties();
+		var matchesExp = /Experience: (\d+)/.exec(properties);
+		var matcheslvl = /Level: (\d+)/.exec(properties);
+
+		if(matchesExp && matchesExp.length>0)		
+			var exp = parseInt(matchesExp[1]);		
+		
+		if(matcheslvl && matcheslvl.length>0)		
+			var lvl = parseInt(matcheslvl[1]);		
+
+		return {"lvl" : lvl, "exp" : exp};
+	}
+}
+
+function loot()
+{
+    var looted = [];
+	var corpses = Orion.FindType('0x2006', '-1', "ground", 'gray', 2);		
+	if(corpses && corpses.length > 0)
+	{
+		corpses.forEach(function(corpse)
+		{
+			if(looted.indexOf(corpse) == -1)
+			{			
+				if(Orion.HaveTarget)
+					Orion.CancelTarget();
+				//Orion.UseObject(blade);
+				Orion.UseType(0x0F52);
+				Orion.WaitTargetObject(corpse);
+				Orion.Wait(500);				
+			}
+			//End Of Loop			
+			Orion.Wait(Orion.Random(300,500));
+			looted.push(corpse);			
+			Orion.Ignore(corpse,false);
+		});	
+		Orion.Print('0x0035',"Finished");		
+//	toAllKeys();
+	}	
+}
+
+function trackDeadMobs()
+{	
+	var started = new Date().getTime();	
+	var totalExp = 0;
+	while(true)
+	{		
+		var startExp = getWeaponInfo(weapon)['exp'];						
+		if(Orion.WaitJournal("You received",Orion.Now(),Orion.Now()+20000))
+		{	
+			Orion.Wait(500);
+			var currentExp = getWeaponInfo(weapon)['exp'];
+			var currentLvl = getWeaponInfo(weapon)['lvl'];
+			var toNextLvl = 100*Math.pow(currentLvl+1,2)-100;
+			Orion.Print('0x0035',"Weapon lvl : "+currentLvl);
+			Orion.Print('0x0035',"Weapon exp : "+currentExp+"/"+toNextLvl+" (+"+(currentExp-startExp)+")");
+			totalExp = totalExp+(currentExp-startExp);						
+			var minutes = ((new Date().getTime() - started) / 1000) / 60;
+			var expPerMinute = (totalExp/minutes).toFixed(2);
+			Orion.Print('0x0035', "Exp@minute : "+expPerMinute);
+		}
+	}
+}
+
+function testBuff()
+{
+ Orion.Print(Orion.BuffExists('Consecrate Weapon'));
+}
+
+function complete_quests()
+{
+	var _completed_quests = Orion.FindTypeEx(config["quest_type"],config["quest_completed_color"],config["quest_completed_bag"]);
+	if(_completed_quests.length)
+	{
+		_completed_quests.forEach(function(_completed_quest){					
+			Orion.MoveItem(_completed_quest.Serial(), 0, config["speculator_serial"]);
+			Orion.Wait(1000);
+		});	
+	}
+}

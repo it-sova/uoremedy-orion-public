@@ -1,0 +1,156 @@
+var config = {
+	'speculator_serial' : 0x00000350,
+	'gold'				: 0x0EED,
+	'quest_type'		: 0x14F0,
+	'quest_color'		: 0x01FF,
+	'quest_bag'			: 0x40021295,
+	'quest_completed_color' : 0x04EA,
+	'quest_completed_bag' : 0x40030ABD,
+};
+
+var quest_coords = {
+	'Frog'    : {'x' : 142, 'y' : 118},
+	'Orc' : {'x' : 142, 'y' : 65},
+	'Despise'  : {'x' : 44,  'y' : 65},
+	'Sewer' : {'x' : 44,  'y' : 118},
+};
+
+function get_quests()
+{
+	var _speculator = Orion.FindObject(config["speculator_serial"]);
+	if(_speculator)
+	{
+		var _gold = Orion.FindObject(Orion.FindType(config["gold"]));
+		if(_gold)
+		{
+			var _times = ~~(_gold.Count()/800);			
+			for(var _i = 1; _i < _times; _i++)
+			{
+				var _gold = Orion.FindObject(Orion.FindType(config["gold"]));
+				Orion.Print(_i+" "+_gold.Serial());
+				Orion.MoveItem(_gold.Serial(), 800, _speculator.Serial());
+				Orion.Wait(1000);
+			}			
+			sort();			
+		}
+	}
+}
+
+function sort()
+{
+	var _quests = Orion.FindType(config["quest_type"],config["quest_color"]);
+	if(_quests.length)
+	{
+		//var _quest = Orion.FindObject(_quests[0]);
+		_quests.forEach(function(_quest_serial){
+			var _quest = Orion.FindObject(_quest_serial);
+			if(_quest)
+			{
+				for(var _location in quest_coords)
+				{								
+					if( RegExp('\\b'+ _location +'\\b').test(_quest.Properties()))
+					{					
+						Orion.MoveItem(_quest.Serial(), 0, config["quest_bag"],quest_coords[_location].x,quest_coords[_location].y);
+						Orion.Wait(1000);
+					}
+				}							
+			}		
+		});
+	}
+	count_quests();
+}
+
+function use_quest()
+{
+	var _quest_name = "Despise";
+	var _to_use = '';
+	var _quests = Orion.FindTypeEx(config["quest_type"],config["quest_color"],config["quest_bag"]);
+	if(_quests.length)
+	{
+		_quests.some(function(_quest){					
+			if( RegExp('\\b'+ _quest_name +'\\b').test(_quest.Properties()))
+			{
+				Orion.UseObject(_quest.Serial());
+				return true;
+			}
+		});
+	}
+	var _completed_quests = Orion.FindTypeEx(config["quest_type"],config["quest_completed_color"],config["quest_bag"]);
+	if(_completed_quests.length)
+	{
+		_completed_quests.forEach(function(_completed_quest){					
+			Orion.MoveItem(_completed_quest.Serial(), 0, config["quest_completed_bag"]);
+			Orion.Wait(1000);
+		});	
+	}
+}
+
+function complete_quests()
+{
+	var _completed_quests = Orion.FindTypeEx(config["quest_type"],config["quest_completed_color"],config["quest_completed_bag"]);
+	if(_completed_quests.length)
+	{
+		_completed_quests.forEach(function(_completed_quest){					
+			Orion.MoveItem(_completed_quest.Serial(), 0, config["speculator_serial"]);
+			Orion.Wait(1000);
+		});	
+	}
+}
+
+function count_quests()
+{
+	var _statistics = {};
+	for(var _location in quest_coords)
+	{								
+		_statistics[_location] = 0;
+	}		
+	var _quests = Orion.FindType(config["quest_type"],config["quest_color"], config["quest_bag"]);
+	if(_quests.length)
+	{		
+		_quests.forEach(function(_quest_serial){
+			var _quest = Orion.FindObject(_quest_serial);
+			if(_quest)
+			{
+				for(var _location in quest_coords)
+				{								
+					if( RegExp('\\b'+ _location +'\\b').test(_quest.Properties()))
+					{					
+						_statistics[_location] = _statistics[_location]+1;						
+					}
+				}							
+			}		
+		});
+	}	
+	for(_statistics_location in _statistics)
+	{
+		Orion.Print(0x089F, _statistics_location+" => "+_statistics[_statistics_location]);
+	}
+}
+
+function move_quest()
+{
+	var _quest_to_move = 'Wrong';
+	var _target_container = 0x4004AFE5;
+	var _quests = Orion.FindType(config["quest_type"],config["quest_color"], config["quest_bag"]);
+	if(_quests.length)
+	{		
+		_quests.forEach(function(_quest_serial){
+			var _quest = Orion.FindObject(_quest_serial);
+			if(_quest)
+			{
+				for(var _location in quest_coords)
+				{								
+					if( RegExp('\\b'+ _location +'\\b').test(_quest.Properties()))						
+					{					
+						if(_location == _quest_to_move)
+						{
+							Orion.MoveItem(_quest.Serial(), 0, _target_container);
+							Orion.Wait(1000);
+						}
+					}
+				}							
+			}		
+		});
+	}	
+
+}

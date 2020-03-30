@@ -1,0 +1,29 @@
+looting_container = 0x123123123
+function GetFromContainer()
+{
+    Orion.RemoveObject('_target_container');
+    Orion.AddObject('_target_container');    
+    Orion.Print(0x0123, 'Select container to loot');
+    while (Orion.HaveTarget())
+         Orion.Wait(500);
+          
+    var _target_container = Orion.FindObject('_target_container');
+    
+    if (_target_container == null || !_target_container.Exists()) {
+        Orion.Print(0x0123, 'Wrong target, try again');
+        return;
+    }
+    
+    Orion.UseObject('_target_container');
+    Orion.Wait(1000);
+    var _items = Orion.FindList('MyList', '_target_container');
+    if(_items.length)
+    {
+      _items.forEach(function(_item){        
+        Orion.MoveItem(_item, 0, looting_container);        
+        Orion.Wait(1000);
+      });
+    }
+    Orion.Print("Finished");
+
+}

@@ -1,0 +1,104 @@
+var config = {
+	'bowcraft'				: 0x1022,		
+	'bowcraft_container'	: 0x400809AA,
+	'boards'				: 0x1BD7,
+	'trash'					: 0x400AC053,	
+	'crafting_type' 		: 0x26C2,
+	'crafting_button'		: 23,
+
+};
+
+
+function Autostart()
+{
+	Orion.UseObject(config["bowcraft_container"]);
+	Orion.Wait(1000);
+	Orion.UseObject(config["trash"]);
+	Orion.Wait(1000);
+	while(!Player.Dead())
+	{
+		var _boards = Orion.FindType(config["boards"]);
+		if(_boards && _boards.length > 0 && Orion.Count(config["boards"], 0xFFFF, 'backpack') > 50)
+		{
+			check_and_get_tools(config["bowcraft"], config["bowcraft_container"]);
+			Orion.CancelWaitGump();			
+			craft(config["bowcraft"],config["crafting_button"]);					
+			Orion.Wait(2000);
+
+			var _crafted = Orion.FindType(config["crafting_type"]);
+			if(_crafted.length)
+			{
+				Orion.MoveItem(_crafted[0], 0, config["trash"]);
+				Orion.Wait(1000);
+			}
+		}
+		else
+		{
+			var _boards_ground = Orion.FindType(config["boards"], 0x0000, 'ground');
+			Orion.Print(_boards_ground);
+			if(_boards_ground.length)
+			{
+				Orion.Print(_boards_ground);
+				Orion.MoveItem(_boards_ground, 500);
+				Orion.Wait(1000);				
+			}
+			else
+			{
+				Orion.PauseScript();
+			}
+		}		
+	}
+}
+
+function check_and_get_tools(tool, container)
+{
+	var _tools = Orion.FindType(tool);
+	if(!_tools.length)
+	{
+		Orion.UseObject(config["bowcraft_container"]);
+		Orion.Wait(1000);
+		var _tools_container = Orion.FindType(tool, 0x0000, container);		
+		if(_tools_container.length && _tools_container.length > 1)
+		{
+			Orion.MoveItem(_tools_container[0]);
+			Orion.Wait(1000);			
+		}
+		else
+		{
+			Orion.Print("No more tools left");
+			Orion.PauseScript();
+		}
+	}
+}
+
+
+function check_and_craft(_item, _qty, _button)
+{
+	while (Orion.FindType(_item).length < _qty)
+	{
+		Orion.Print("[i] Crating required tool")
+		craft(config["tinkerTools"],_button);
+		Orion.Wait(1000);
+	}	
+}
+
+function craft(_tools, _button)
+{
+	Orion.UseType(_tools);
+	Orion.WaitGump(Orion.CreateGumpHook(_button));
+	if(Orion.WaitForGump(2000))
+	{		
+		Orion.WaitGump(Orion.CreateGumpHook(0));
+		Orion.Wait(15000); //Hardcoded! Fix!
+	}
+	else
+	{
+		Orion.Print("Error crafting item, WaitForGump timeout exceeded");
+		//Orion.PauseScript();
+	}
+}
+
+function test()
+{
+	Orion.Print(Orion.Count(config["boards"], 0xFFFF, 'backpack'));
+}

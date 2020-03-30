@@ -1,0 +1,25 @@
+var start_x = Player.X();
+var start_y = Player.Y();
+var mount = 0x00001005;
+function Autostart()
+{
+	while(!Player.Dead())
+	{								
+		if(Orion.ObjAtLayer('25') == null) 
+		{	
+			var _mount = Orion.FindObject(mount);
+			if(_mount)
+			{				
+				Orion.WalkTo(_mount.X(),_mount.Y(),_mount.Z(),1);
+				Orion.UseObject(mount);
+				Orion.Wait(200);
+			}
+		}
+		else
+		{
+				Orion.WalkTo((start_x-4),start_y, Player.Z(), 0);
+				Orion.WalkTo((start_x+4),start_y, Player.Z(), 0);
+		}				
+		Orion.Wait(200);
+	}
+}

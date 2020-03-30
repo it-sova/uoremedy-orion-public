@@ -1,0 +1,29 @@
+var start_x = Player.X();
+var start_y = Player.Y();
+function HealAndRun()
+{ 
+	while(!Player.Dead())
+	{
+		while(Player.Hits()<(Player.MaxHits()-10))
+		{		
+			Orion.ClearJournal();
+			Orion.Say("[bandself");
+			Orion.Wait(500);
+			Orion.WaitJournal("You finish|not damaged|heal|barely help", Orion.Now(), Orion.Now()+20000);
+
+			if(Orion.Count('0x0E21') < 10)
+			{
+				Orion.Print('33', ' [' + Orion.Count('0x0E21') + '] bandage left ! ');
+			}
+		}		
+		while(Player.Hits() >= (Player.MaxHits()-80))
+		{
+			Orion.WalkTo(start_x, (start_y+2), Player.Z(), 0);			
+			Orion.WalkTo(start_x, (start_y-2), Player.Z(), 0);
+			Orion.Wait(500);
+		}
+		Orion.Wait(100);										
+	}
+	Orion.Wait(100);
+	
+}

@@ -1,0 +1,394 @@
+var config = {
+   "maxWeight"        : (Player.MaxWeight()-100),//Max Weight to cut wood   
+   "axe"             : "0x0F43",    //Axe type
+   "logs"            : 0x1BDD,      //Log type     
+   "boards"          : "0x1BD7",
+   "treesSearchOffset" : 20,         //Radius of tree search   
+   "tinkerTools"      : "0x1EB8",
+   "tinkerTools_keep" : 2,
+   "tinkerTools_button": 128,  
+   "axe_keep"     : 10,
+   "axe_button"   : 135,//change
+   "ingots"           : 0x1BF2,
+   "ingots_keep"      : 100,
+   "maxTry"           : 15,
+   "home_chest"       : 0x4008C5A4
+};
+
+var moreStuff = [
+  0x1BDD,
+  0x2F5F,
+  0x3199,
+  0x3191,
+  0x318F,
+  0x3190,
+  0x0EED
+];
+
+var points = {  
+  0 : {"x" : 3007, "y" : 244, "z" : 0},
+
+
+}; //Minoc_test
+
+var bankCoords = {
+  "x" : 3030, "y" : 213
+};
+
+
+function Autostart()
+{   
+  
+  Orion.Exec("AutoHealSelf",true)
+  Orion.Exec("ability",true)
+   while(!Player.Dead())
+   {
+      for(point in points)
+      {
+         Orion.Print("Point #"+point)
+         move_unstuck(points[point]['x'],points[point]['y'],points[point]['z']);
+         /*while(!Orion.WalkTo(points[point]['x'],points[point]['y'],points[point]['z'],0))
+         {
+            Orion.WalkTo(points[point]['x'],points[point]['y'],points[point]['z'],0);
+            Orion.Wait(500);
+         }*/
+         var splited = getTreeTiles(config['treesSearchOffset']);            
+         if(splited)
+         {
+            var cnt=0;
+             for(var i = 0; i<=splited.length-3; i+=3)
+             {       
+                cnt++;
+                 var x = splited[i];
+                 var y = splited[i+1];
+                 var z = splited[i+2];
+                  
+               Orion.Print('0x0035','Point #'+point+' Tree #'+cnt+'/'+splited.length/3);      
+               Orion.Print('0x0099','X = '+x+' Y = '+y+' Z = '+z);
+               move_unstuck(x, y, z);
+               /*var _tmp_x = 0;
+               var _tmp_y = 0;
+               while(!Orion.WalkTo(x,y,z,1))
+               {             
+                _tmp_x = Player.X();
+                _tmp_y = Player.Y();   
+                Orion.WalkTo(x,y,z,1);
+                if(_tmp_x == Player.X() && _tmp_y == Player.Y())
+                {
+                  Orion.Print("Stuck?")
+                  Orion.Step(1);
+                  Orion.Step(1);
+                  Orion.Step(1);
+                }
+
+                Orion.Wait(500);
+               }*/
+               chop(x,y,z,point);         
+            }
+         }
+      }
+      Orion.Wait(1000);
+   }
+}
+
+
+function chop(x,y,z,point)
+{
+   var _try_count = 0;        
+   //Orion.Print("[i] Chopping at  X+"+x+" Y+"+y);
+   while(!Player.Dead())
+   {                     
+       if(Orion.ValidateTargetTile('tree', x, y))
+       {            
+          if(Orion.HaveTarget())
+             Orion.CancelTarget();
+          if(Orion.ObjAtLayer(2) == null)
+          {
+            Orion.Say("[armtool 1");
+            Orion.Wait(500);
+          }
+          cut();            
+          if(Player.Weight() >= config['maxWeight'] )                
+            //unloadToBank(x,y+1,z,point)
+            unloadToBank(Player.X(),Player.Y(),Player.Z())
+
+          var _enemy = Orion.FindList('Elementals',ground,'near|mobile', 18, '')
+          if(_enemy != null && _enemy.length > 0)
+          {
+            Orion.Print("Found enemy");
+            Orion.Print(_enemy[0]);
+              Orion.Attack(_enemy[0]);
+              follow(_enemy[0], Player.X(), Player.Y());
+              Orion.Wait(500);            
+          }
+          Orion.UseObject(Orion.ObjAtLayer(2).Serial());
+          Orion.WaitTargetTile('tree', x, y, z);                          
+          var result = Orion.WaitJournal("You hack at|You put|not enough|be seen|is too far|no line of|seen|You chop|You have worn|You cannot", Orion.Now(), (Orion.Now() + 7000), 'me|sys');
+          Orion.Wait(500)          
+          _try_count++;
+          Orion.Print("Try #"+_try_count);
+          if(_try_count > config["maxTry"])
+          {
+            Orion.Print("Try count exceeded, skipping tree.");
+            break;
+          }
+          if(result && result.FindTextID()==2)
+          {
+             Orion.Print("[i] Tile depleted");
+             Orion.Wait(300);
+             break;
+          }          
+
+       }
+       else
+        break;
+     Orion.Wait(1000);
+   }//Main Loop
+}
+
+function cut()
+{
+  if(Orion.ObjAtLayer(2) == null)
+  {
+    Orion.Say("[armtool 1");
+    Orion.Wait(500);
+  }
+  var _logs = Orion.FindType(config["logs"], -1, 'backpack');
+  if(_logs.length)
+  {
+    _logs.forEach(function(_log){
+     
+      if(Orion.HaveTarget())
+       Orion.CancelTarget();
+
+      Orion.Print(_log);
+      Orion.WaitTargetObject(_log);
+      Orion.UseObject(Orion.ObjAtLayer(2).Serial());      
+      //Orion.WaitTargetType(config["logs"], -1);      
+      Orion.Wait(1000);
+    });
+  }
+}
+
+function getTreeTiles(offset)
+{
+    var validTiles=[];
+    var cntValid = 0;
+    for (var x = -offset; x <= offset; x++)
+    {
+        for (var y = -offset; y <= offset; y++)
+        {
+            if(Orion.ValidateTargetTileRelative('tree',x,y))
+            {
+                //Orion.Print("Valid tile! X="+x+" Y="+y);
+                validTiles.push(Player.X()+x,Player.Y()+y,0);
+                cntValid++;
+            }
+        }
+    }
+
+      
+
+    Orion.Print("[getTreeTiles]Trees found = "+cntValid);
+    if(cntValid>0)
+        return validTiles;
+    else
+        return false;   
+   
+}
+
+function unloadToBank(x, y, z)
+{
+  //while (Player.X() != bankCoords["x"] && Player.Y() != bankCoords["y"])
+  move_unstuck(bankCoords["x"],bankCoords["y"]);
+  /*while(!Orion.WalkTo(bankCoords["x"],bankCoords["y"],0,0))
+  {   
+    Orion.WalkTo(bankCoords["x"],bankCoords["y"],0,0)
+    Orion.Wait(500);
+  }*/
+  Orion.UseObject(config['home_chest']);
+  Orion.Wait(1000);
+  var _boards = Orion.FindType(config['boards'], -1, 'backpack')
+  if (_boards && _boards.length > 0)
+  {      
+      _boards.forEach(function(_item){
+      Orion.Print("Moving...");
+      Orion.MoveItem(_item, 0, config['home_chest']);
+      Orion.Wait(1000);
+    });
+  }
+
+  moreStuff.forEach(function(_item){
+    var _item_found = Orion.FindType(_item, -1, 'backpack');
+    if(_item_found)
+    {     
+      Orion.MoveItem(_item_found, 0, config['home_chest']);
+      Orion.Wait(1000);   
+    }
+  });
+
+  var _ingots = Orion.FindType(config['ingots'], 0x0000, 'backpack');
+  if(!_ingots.length || Orion.FindObject(_ingots).Count() < config["ingots_keep"])
+  {
+    var _ingots_bank = Orion.FindType(config['ingots'], 0x0000, config['home_chest'])
+    {
+      if(_ingots_bank.length)
+      {
+        var _ingots_bank_object = Orion.FindObject(_ingots_bank);
+        if(_ingots_bank_object && _ingots_bank_object.Count() > config["ingots_keep"])
+        {
+          Orion.MoveItem(_ingots_bank, config["ingots_keep"], 'backpack');
+          Orion.Wait(1500);  
+        }
+        else
+        {
+          Orion.Print("No more ingots in bank!");
+          Orion.PauseScript();
+        }
+        
+      }
+    }
+  }
+  check_and_craft(config["tinkerTools"], config["tinkerTools_keep"], config["tinkerTools_button"]);
+  Orion.Wait(1000);
+  check_and_craft(config["axe"], config["axe_keep"], config["axe_button"]);
+  Orion.Wait(1000);
+
+  
+
+  /*while (Player.X() != x && Player.Y() != y)
+  {  
+    Orion.Print("Moving to fucking X "+x+ " Y "+y);
+    Orion.WalkTo(x, y, z, 0)
+    Orion.Wait(500);
+  }*/
+  move_unstuck(x, y, z);
+   /*var _tmp_x = 0;
+   var _tmp_y = 0;
+   while(!Orion.WalkTo(x,y,z,1))
+   {             
+      _tmp_x = Player.X();
+      _tmp_y = Player.Y();   
+      Orion.WalkTo(x,y,z,1);
+      if(_tmp_x == Player.X() && _tmp_y == Player.Y())
+      {
+        Orion.Print("Stuck?")
+        Orion.Step(1);
+        Orion.Step(1);
+        Orion.Step(1);
+      }
+
+      Orion.Wait(500);
+   }*/
+
+}
+
+
+function check_and_craft(_item, _qty, _button)
+{
+  while (Orion.FindType(_item).length < _qty)
+  {
+    Orion.Print("In While")
+    craft(config["tinkerTools"],_button);
+  }
+  Orion.Print("Tools ok")
+}
+
+//_tools -> Crafting tools type 
+//_button -> Gump response id
+function craft(_tools, _button)
+{
+  Orion.UseType(_tools);
+  Orion.WaitGump(Orion.CreateGumpHook(_button));
+  if(Orion.WaitForGump(2000))
+  {   
+    Orion.WaitGump(Orion.CreateGumpHook(0));
+    Orion.Print("Crafted -> Closed?");
+    Orion.Wait(10000); // @TODO: Fix harcoded delay
+  }
+  else
+  {
+    Orion.Print("Error crafting item, WaitForGump timeout exceeded");
+    Orion.PauseScript();
+  }
+}
+
+function test()
+{
+  //2568, "y" : 277, "z" : 35}
+  unloadToBank(2568, 277, 35, 17);
+  //Orion.MoveItem(0x4005F8B1, 0, config['home_chest']);
+}
+
+function AutoHealSelf()
+{ 
+  while(!Player.Dead())
+  {
+    while(Player.Hits()<(Player.MaxHits()-20))
+    {   
+      Orion.ClearJournal();
+      Orion.Say("[bandself");
+      Orion.Wait(500);
+      Orion.WaitJournal("You finish|not damaged|heal|barely help", Orion.Now(), Orion.Now()+20000);
+
+      if(Orion.Count('0x0E21') < 10)
+      {
+        Orion.Print('33', ' [' + Orion.Count('0x0E21') + '] bandage left ! ');
+      }
+    }   
+    Orion.Wait(100);                    
+  }
+  Orion.Wait(100);
+  Orion.IgnoreReset();  
+}
+
+function ability()
+{
+  while(!Player.Dead())
+  {
+    if(!Orion.AbilityStatus('primary'))
+    {
+      if(Player.Mana()>28)
+        Orion.UseAbility('primary');
+    }
+    Orion.Wait(500);
+  }
+}
+
+function follow(_target_serial, _original_x, _original_y)
+{   
+  while (Orion.FindObject(_target_serial) != null )
+  {
+    var _target = Orion.FindObject(_target_serial);
+    if(_target && _target != null)
+    {
+      Orion.WalkTo(_target.X(), _target.Y(), _target.Z(),1);
+      Orion.Wait(100);
+    }
+  } 
+  Orion.Wait(3000);
+  Orion.Print("Returning to position");
+  move_unstuck(_original_x, _original_y, Player.Z());
+  //Orion.WalkTo(_original_x, _original_y, Player.Z(), 0);
+}
+
+function move_unstuck(x, y, z)
+{
+   var _tmp_x = 0;
+   var _tmp_y = 0;
+   while(!Orion.WalkTo(x, y, z, 1))
+   {             
+      _tmp_x = Player.X();
+      _tmp_y = Player.Y();   
+      Orion.WalkTo(x, y, z, 1);
+      if(_tmp_x == Player.X() && _tmp_y == Player.Y())
+      {
+        Orion.Print("Stuck?")
+        Orion.WalkTo(Player.X()+4, Player.Y(), Player.Z(), 1);
+        Orion.WalkTo(Player.X(), Player.Y()+4, Player.Z(), 1);
+        Orion.WalkTo(Player.X()+4, Player.Y()+4, Player.Z(), 1);
+      }
+
+      Orion.Wait(500);
+   }
+}

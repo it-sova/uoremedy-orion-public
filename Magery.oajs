@@ -1,0 +1,25 @@
+var mount = 0x00000172;
+var start_x = Player.X();
+var start_y = Player.Y();
+//var spell_to_cast = 'Holy Light';
+var spell_to_cast = 'Mass Dispel';
+function Autostart()
+{
+	while(!Player.Dead())
+	{
+		if(Player.Mana() > 40)
+		{
+			Orion.Cast(spell_to_cast);
+			Orion.WaitTargetObject('self');
+			Orion.Wait(7000);
+		}
+		else
+		{
+			while(Player.Mana() < 40)
+			{								
+				Orion.Wait(5000);
+			}
+			
+		}
+	}
+}

@@ -1,0 +1,137 @@
+var config = {
+	'tongs' 				: 0x0FBB,
+	'tongs_keep' 			: 2,
+	'tongs_button' 			: 198,
+	'tinkerTools'      		: 0x1EB8,
+	'tinkerTools_keep' 		: 2,
+	'tinkerTools_button'	: 128,
+	'ingot'					: 0x1BF2,
+	'ingot_keep'			: 300,
+	'salvage_bag'			: 0x40069F81,
+	//////////Dagger
+	//'crafting_type' 		: 0x0F52,
+	//'crafting_button'		: 30,
+	/////////Short spear
+	//'crafting_type' 		: 0x1403,
+	//'crafting_button'		: 44,
+	/////////Royal Circlet
+	'crafting_type' 		: 0x2B6F,
+	'crafting_button'		: 100,
+
+};
+
+var bankCoords = {
+	"x" : 2494, "y" : 559
+};
+
+var forgeCoords = {
+	"x" : 2466, "y" : 556
+};
+function start()
+{
+	while(!Player.Dead())
+	{
+		var _ingots = Orion.FindType(config["ingot"]);
+		if(_ingots && _ingots.length > 0)
+		{			
+			var _ingots_qty = Orion.Count(config["ingot"]);
+			if(_ingots_qty > 50 )
+			{
+				Orion.CancelWaitGump();
+				//arms_lore();
+				Orion.Print(0x089F, "[i] Ingots in backpack -> "+_ingots_qty);
+				check_and_craft(config["tinkerTools"], config["tinkerTools_keep"], config["tinkerTools_button"]);
+				check_and_craft(config["tongs"], config["tongs_keep"], config["tongs_button"]);
+				craft(config["tongs"],config["crafting_button"]);
+				Orion.Wait(1000);
+				smelt();
+				Orion.Wait(1000);
+			}
+			else
+			{
+				unloadToBank();
+			}			
+		}
+		else
+		{
+			unloadToBank();
+		}
+	}
+}
+
+function arms_lore()
+{	
+	var _target = Orion.ObjAtLayer(1).Serial();
+	Orion.WaitTargetObject(Orion.ObjAtLayer(1).Serial());
+	Orion.UseSkill("Arms Lore");
+	Orion.Wait(1000);	
+}
+
+function smelt()
+{
+	var _crafted = Orion.FindType(config["crafting_type"]);
+	if(_crafted && _crafted.length > 0)
+	{
+		Orion.MoveItem(_crafted[0],0,config['salvage_bag']);
+		Orion.Wait(1000);		
+		Orion.RequestContextMenu(config["salvage_bag"]);
+		Orion.WaitContextMenu(config["salvage_bag"], 0);
+		Orion.WaitForContextMenu(1000);							
+	}
+
+}
+
+function unloadToBank()
+{
+	while (Player.X() != bankCoords["x"] && Player.Y() != bankCoords["y"])
+	{		
+		Orion.WalkTo(bankCoords["x"],bankCoords["y"],0,0)
+	}
+	Orion.Say('bank');
+	Orion.Wait(1000);
+	var _ingots = Orion.FindType(config['ingot'], 0x0000, Player.BankSerial());
+	if(_ingots)
+	{
+		_ingots_object = Orion.FindObject(_ingots);
+		Orion.Print("[i] Ingots left -> "+_ingots_object.Count())
+		Orion.MoveItem(_ingots, config["ingot_keep"], 'backpack');
+		Orion.Wait(1000);
+	}
+	else
+	{
+		Orion.Print("[!] No more ingots left =(");
+		Orion.PauseScript();
+	}
+
+	while (Player.X() != forgeCoords["x"] && Player.Y() != forgeCoords["y"])
+	{		
+		Orion.WalkTo(forgeCoords["x"],forgeCoords["y"],0,0)
+	}
+	
+}
+
+function check_and_craft(_item, _qty, _button)
+{
+	while (Orion.FindType(_item).length < _qty)
+	{
+		Orion.Print("[i] Crating required tool")
+		craft(config["tinkerTools"],_button);
+		Orion.Wait(1000);
+	}	
+}
+
+function craft(_tools, _button)
+{
+	Orion.UseType(_tools);
+	Orion.WaitGump(Orion.CreateGumpHook(_button));
+	if(Orion.WaitForGump(2000))
+	{		
+		Orion.WaitGump(Orion.CreateGumpHook(0));
+		Orion.Wait(10000); //Hardcoded! Fix!
+	}
+	else
+	{
+		Orion.Print("Error crafting item, WaitForGump timeout exceeded");
+		//Orion.PauseScript();
+	}
+}

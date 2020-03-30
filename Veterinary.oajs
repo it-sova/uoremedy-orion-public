@@ -1,0 +1,23 @@
+function vet()
+{
+	var target = [0x00001005];
+	target.forEach(function(_target){
+		var mule = Orion.FindObject(_target);
+		Orion.Print(mule.Hits()+"/"+mule.MaxHits());
+		if(mule)
+		{
+			while(mule.Hits()<mule.MaxHits())
+			{
+				Orion.UseType("0x0E21");
+				Orion.WaitTargetObject(_target);
+				Orion.WaitJournal("You apply|You must|You have been cured|You did|You fail|damaged|far away|You finish",Orion.Now(),Orion.Now()+10000);
+			}
+		}
+	});
+}
+
+while(!Player.Dead())
+{
+	vet();
+	Orion.Wait(1000);
+}

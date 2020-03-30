@@ -1,0 +1,49 @@
+function MassMove()
+{
+    Orion.RemoveObject('_what');
+    Orion.AddObject('_what');    
+      Orion.Print('0x0123', 'Move what?');
+      while (Orion.HaveTarget())
+           Orion.Wait(500);
+          
+    var _what = Orion.FindObject('_what');
+    
+    if (_what == null || !_what.Exists()) {
+        Orion.Print('0x0123', 'Failed to choose item to move');
+        return;
+    }
+
+    Orion.Print('0x0123', 'Moving -> ' +  _what.Name());
+    
+    Orion.RemoveObject('_where');
+    Orion.AddObject('_where');
+    
+      Orion.Print('0x0123', 'Where to move?');
+      while (Orion.HaveTarget())
+           Orion.Wait(500);
+          
+    var _where = Orion.FindObject('_where');   
+    
+    if (_where == null || !_where.Exists()) {
+        Orion.Print('0x0123', 'Failed to to choose container');
+        return;
+    }
+    
+    Orion.Print('0x0123', 'Moving to -> ' +  _where.Name());
+    
+    var tmplist = Orion.FindType(_what.Graphic(), '-1', _what.Container());
+    
+      if (tmplist.length)
+    {   
+          for (var i = 0; i < tmplist.length; i++)
+          {
+                Orion.MoveItem(tmplist[i], 0, '_where');
+                Orion.Wait(1000);
+                Orion.Print(0x0123, 'Completed: ' + 100*i / tmplist.length + '%');
+           }
+       }
+      else   
+        Orion.Print(0x0123, 'Array is empty');       
+    Orion.Print(0x0123, 'Completed: ' + 100*i / tmplist.length + '%');       
+    Orion.Print(0x0123, 'Finished');   
+}

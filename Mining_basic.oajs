@@ -1,0 +1,348 @@
+var config = {
+   "maxWeight"        : (Player.MaxWeight()-30), //Max Weight to smelt 
+   "unloadWeight"     : (Player.MaxWeight()-150), //Max Weight to unloaad   
+   "pickaxe"          : "0x0F39", //Pickaxe type(pickaxe, shovel etc)
+   "pickaxe_keep"     : 5,
+   "pickaxe_button"   : 177,
+   "ore"              : "0x19B9", 
+   "forge"            : "0x0FB1",
+   "ingot"  		  : "0x1BF2",
+   //"breakstone" 	  : "0x11EA",
+   "tinkerTools"      : "0x1EB8",
+   "tinkerTools_keep" : 2,
+   "tinkerTools_button": 128,
+   "forge"			  : "0x400094D2",      
+   "toolQty"          : 1,        //For check_tools, alert when < toolQty
+   "tileOffset"       : 2,     // Radius to dig (X+-2, Y+-2)
+
+};
+
+var moreStuff = [
+	0x0EED,
+	0x11EA,
+	0x3194,
+	0x3195,
+	0x5732,
+	0x3192,
+	0x3193,
+	0x0F28,
+	0x3198,
+	0x3197
+];
+
+var bankCoords = {
+	"x" : 2513, "y" : 547
+};
+
+var forgeCoords = {
+	"x" : 2563, "y" : 504	
+};
+
+/*var minePoints = {
+   1 : {"x" : 2559, "y" : 496, "z" : 0},
+   2 : {"x" : 2563, "y" : 489, "z" : 0},
+   3 : {"x" : 2566, "y" : 482, "z" : 0},
+   4 : {"x" : 2572, "y" : 484, "z" : 0},
+   5 : {"x" : 2577, "y" : 481, "z" : 0},
+   6 : {"x" : 2575, "y" : 477, "z" : 0},
+   7 : {"x" : 2571, "y" : 477, "z" : 0},
+};*/
+
+var minePoints = {
+	1 : {"x" : 2559, "y" : 496, "z" : 0 },
+	2 : {"x" : 2563, "y" : 489, "z" : 0 }, 
+	3 : {"x" : 2573, "y" : 483, "z" : 0 },
+	4 : {"x" : 2566, "y" : 479, "z" : 0 },
+	5 : {"x" : 2573, "y" : 475, "z" : 0 },
+	6 : {"x" : 2581, "y" : 471, "z" : 0 },
+	7 : {"x" : 2569, "y" : 466, "z" : 0 },
+	8 : {"x" : 2564, "y" : 471, "z" : 0 },
+	9 : {"x" : 2559, "y" : 466, "z" : 0 },
+	10 : {"x" : 2566, "y" : 462, "z" : 0 },
+	12 : {"x" : 2572, "y" : 460, "z" : 0 },
+	12 : {"x" : 2584, "y" : 471, "z" : 0 },
+	13 : {"x" : 2587, "y" : 464, "z" : 0 },
+	14 : {"x" : 2588, "y" : 478, "z" : 0 },
+	15 : {"x" : 2591, "y" : 470, "z" : 0 },
+	16 : {"x" : 2590, "y" : 464, "z" : 0 }
+};
+
+function start()
+{   
+   init();   
+   while(!Player.Dead())
+   {
+      for(var i in minePoints)
+      {      
+         Orion.Print('[i] Point '+i);      
+         Orion.WalkTo(minePoints[i]["x"],minePoints[i]["y"], minePoints[i]["z"],0);
+         for (var x = -config['tileOffset']; x <= config['tileOffset']; x++)
+         {
+            for (var y = -config['tileOffset']; y <= config['tileOffset']; y++)
+            {
+               mine(x,y);
+            }
+         }
+      }
+   }
+}
+
+function mine(x,y)
+{
+   Orion.Print("[i] Mining at offset X+"+x+" Y+"+y);
+   while(!Player.Dead())
+   {       
+       if(checkTool())
+       {
+          if(Player.Weight() >= config['maxWeight'] )
+             smelt(Player.X(),Player.Y(),Player.Z());
+
+          if(Orion.ValidateTargetTileRelative('mine', x, y))
+          {
+
+          	//var _enemy = Orion.FindType("0x006D", "0xFFFF", 'ground')
+          	var _enemy = Orion.FindList('Elementals',ground,'near|mobile', 18, '')
+   			if(_enemy != null && _enemy.length > 0)
+		   	{
+		   		Orion.Print("Found enemy");
+		   		Orion.Print(_enemy[0]);
+		   	   	Orion.Attack(_enemy[0]);
+		   	   	follow(_enemy[0], Player.X(), Player.Y());
+		   	   	Orion.Wait(500);		   	   	
+		   	}
+
+             if(Orion.HaveTarget())
+                Orion.CancelWaitTarget();
+             
+             Orion.UseType(config['pickaxe']);   
+             Orion.WaitJournal('Where do you wish', Orion.Now(), Orion.Now()+2000, 'me|sys');
+             Orion.TargetTileRelative('mine', x, y, Player.Z());                          
+             var result = Orion.WaitJournal('You put some|You loosen some|There is no metal|You can\'t|You have worn|You dig|Try mining|is too far|no line of|seen', Orion.Now(), (Orion.Now() + 7000), 'me|sys');          
+             
+             /*if(badOre.indexOf(result.Text()) > -1)
+             {
+             	Orion.Print("Low level ore found, skipping");
+             	Orion.Wait(300);
+             	break;
+             }*/
+             if(result && (result.FindTextID()==2 || result.FindTextID()==3))
+             {
+
+                Orion.Print("[i] Tile depleted");
+                Orion.Wait(300);
+                break;
+             }                          
+
+          }else{
+             break;
+          }       
+       }else{ //Not enough tools
+          break;
+       }
+   //Main Loop
+   }
+}
+function smelt(x,y,z){
+  	Orion.Print("[i] Smelting");     
+  	while(Orion.WalkTo(forgeCoords["x"],forgeCoords["y"],0,0) != true)
+  	{
+  		Orion.WalkTo(forgeCoords["x"],forgeCoords["y"],0,0);
+  	}
+
+	if(Orion.WalkTo(forgeCoords["x"],forgeCoords["y"],0,0))			
+	{
+		Orion.Print("[i] Smelting spot reached")
+		var ores = Orion.FindType(config['ore'],-1, 'backpack');
+		if(ores && ores.length > 0)
+		{
+		   ores.forEach(function(items){		      
+		      Orion.UseObject(items)
+		      Orion.WaitJournal("Select the forge", Orion.Now(), Orion.Now()+1000, 'me|sys');
+		      Orion.TargetObject(config["forge"]);
+			  var result = Orion.WaitJournal("You have no|You burn away|You smelt", Orion.Now(), Orion.Now()+1000, 'me|sys');
+		      Orion.Wait(500);
+		      if(result && result.FindTextID()==0)
+		      { 
+		    		Orion.Print("[i] Cants smelt, skip");
+		    		Orion.Wait(300);
+		    		Orion.Ignore(items)
+		   			continue;
+		       }                          
+
+		   });
+		   check_and_craft(config["tinkerTools"], config["tinkerTools_keep"], config["tinkerTools_button"]);
+		   Orion.Wait(1000);
+		   check_and_craft(config["pickaxe"], config["pickaxe_keep"], config["pickaxe_button"]);
+		   Orion.Wait(1000);
+		   if(Player.Weight() >= config['unloadWeight'])
+		   		unloadToBank(x,y,z)
+
+		   while (Orion.WalkTo(x,y,z,0) != true)	
+		   {
+		   		Orion.WalkTo(x,y,z,0);
+		   }
+		}
+	}  
+   
+}
+
+
+
+function unloadToBank(x, y, z)
+//function unloadToBank()
+{
+	while (Player.X() != bankCoords["x"] && Player.Y() != bankCoords["y"])
+	{		
+		Orion.WalkTo(bankCoords["x"],bankCoords["y"],0,0)
+	}
+	Orion.Say('bank');
+	Orion.Wait(1000);
+	var _ingots = Orion.FindType(config['ingot'], -1, 'backpack')
+	if (_ingots && _ingots.length > 0)
+	{
+		Orion.Print("Found some ingots");
+		_ingots.forEach(function(_item){
+			Orion.Print("Moving...");
+			Orion.MoveItem(_item, 0, Player.BankSerial());
+			Orion.Wait(1000);
+		});
+	}
+
+	moreStuff.forEach(function(_item){
+		var _item_found = Orion.FindType(_item, -1, 'backpack');
+		if(_item_found)
+		{			
+			Orion.MoveItem(_item_found, 0, Player.BankSerial());
+			Orion.Wait(1000);		
+		}
+	});
+	/*
+	var _breakstone = Orion.FindType(config['breakstone'], -1, 'backpack')
+	if(_breakstone)
+	{
+		Orion.Print("Found breakstone");
+		Orion.MoveItem(_breakstone, 0, Player.BankSerial());
+		Orion.Wait(1000);
+	}
+
+	var _gold = Orion.FindType(0x0EED, -1, 'backpack')
+	if(_gold)
+	{
+		Orion.Print("Found some gold");
+		Orion.MoveItem(_gold, 0, Player.BankSerial());
+		Orion.Wait(1000);
+	}*/
+
+	while (Player.X() != x && Player.Y() != y)
+	{		
+		Orion.WalkTo(x, y, z, 0)
+	}
+
+}
+
+
+function checkTool()
+{   
+   var tools = Orion.FindType(config['pickaxe'], -1, 'backpack');
+   if(tools && tools.length >= config['toolQty'])
+   {
+      Orion.Print("[i] There is "+tools.length+" tools left");
+      return true;
+   }else{
+      Orion.Print("[e] Not enough tools");      
+      Orion.PlayWav("Alarm");
+      Orion.PauseScript();            
+      return false;
+   }
+}
+
+function init()
+{   
+
+   if(Player.WarMode())
+      Player.WarMode(false)
+  Orion.Exec("AutoHealSelf",true)
+  Orion.Exec("ability",true)
+   Orion.Print("Initialization...");
+}
+
+function AutoHealSelf()
+{ 
+	while(!Player.Dead())
+	{
+		while(Player.Hits()<(Player.MaxHits()-20))
+		{		
+			Orion.ClearJournal();
+			Orion.Say("[bandself");
+			Orion.Wait(500);
+			Orion.WaitJournal("You finish|not damaged|heal|barely help", Orion.Now(), Orion.Now()+20000);
+
+			if(Orion.Count('0x0E21') < 10)
+			{
+				Orion.Print('33', ' [' + Orion.Count('0x0E21') + '] bandage left ! ');
+			}
+		}		
+		Orion.Wait(100);										
+	}
+	Orion.Wait(100);
+	Orion.IgnoreReset();	
+}
+
+function ability()
+{
+	while(!Player.Dead())
+	{
+		if(!Orion.AbilityStatus('primary'))
+		{
+			if(Player.Mana()>28)
+				Orion.UseAbility('primary');
+		}
+		Orion.Wait(100);
+	}
+}
+
+function follow(_target_serial, _original_x, _original_y)
+{		
+	while (Orion.FindObject(_target_serial) != null )
+	{
+		var _target = Orion.FindObject(_target_serial);
+		if(_target && _target != null)
+		{
+			Orion.WalkTo(_target.X(), _target.Y(), _target.Z(),1);
+			Orion.Wait(100);
+		}
+	}	
+	Orion.Wait(3000);
+	Orion.Print("Returning to position");
+	Orion.WalkTo(_original_x, _original_y, Player.Z(), 0);
+}
+
+
+function check_and_craft(_item, _qty, _button)
+{
+	while (Orion.FindType(_item).length < _qty)
+	{
+		Orion.Print("In While")
+		craft(config["tinkerTools"],_button);
+	}
+	Orion.Print("Tools ok")
+}
+
+//_tools -> Crafting tools type 
+//_button -> Gump response id
+function craft(_tools, _button)
+{
+	Orion.UseType(_tools);
+	Orion.WaitGump(Orion.CreateGumpHook(_button));
+	if(Orion.WaitForGump(2000))
+	{		
+		Orion.WaitGump(Orion.CreateGumpHook(0));
+		Orion.Print("Crafted -> Closed?");
+		Orion.Wait(10000); // @TODO: Fix harcoded delay
+	}
+	else
+	{
+		Orion.Print("Error crafting item, WaitForGump timeout exceeded");
+		Orion.PauseScript();
+	}
+}
