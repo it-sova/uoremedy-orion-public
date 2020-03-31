@@ -1,0 +1,173 @@
+var config = {
+	//"taming_type" : "0x00D8|0x00E7", // Britain cows
+	"taming_type" : "0x00E8|0x00E9|0x00EA", // Delucia bulls\harts
+	"wait_minutes": 2, //Wait and taming timeout
+
+};
+
+/*var points = { //Britain Cows bulls 0 - 71
+	1 : {"x" : 1319, "y" : 1806},
+	2 : {"x" : 1319, "y" : 1814},
+	3 : {"x" : 1319, "y" : 1820},
+	4 : {"x" : 1319, "y" : 1827}
+};*/
+
+var points = {	//Delucia 71 - 100500
+	1 : {"x" : 5166, "y" : 3911, "z" : -3},
+	2 : {"x" : 5155, "y" : 3912, "z" : -3},
+	3 : {"x" : 5174, "y" : 3890, "z" : 2},
+	4 : {"x" : 5191, "y" : 3893, "z" : 3},
+	5 : {"x" : 5205, "y" : 3910, "z" : 2},
+
+	//Not required but.. i fucking don't want to change it anymore =\
+	6 : {"x" : 5201, "y" : 3879, "z" : 2},
+	7 : {"x" : 5205, "y" : 3866, "z" : -3},
+	8 : {"x" : 5202, "y" : 3853, "z" : 1},
+	9 : {"x" : 5221, "y" : 3842, "z" : 1},
+	10 : {"x" : 5237, "y" : 3841, "z" : 2},
+	11 : {"x" : 5251, "y" : 3843, "z" : -3},
+	12 : {"x" : 5272, "y" : 3838, "z" : 0},
+	13 : {"x" : 5287, "y" : 3842, "z" : 3},
+	14 : {"x" : 5264, "y" : 3872, "z" : 2},
+	15 : {"x" : 5250, "y" : 3892, "z" : 1},
+	16 : {"x" : 5237, "y" : 3886, "z" : 32},
+	17 : {"x" : 5217, "y" : 3892, "z" : 32},
+	18 : {"x" : 5219, "y" : 3879, "z" : 32},
+	19 : {"x" : 5201, "y" : 3879, "z" : 2},
+	20 : {"x" : 5205, "y" : 3866, "z" : -3},
+	21 : {"x" : 5202, "y" : 3853, "z" : 1},
+	22 : {"x" : 5221, "y" : 3842, "z" : 1},
+	23 : {"x" : 5237, "y" : 3841, "z" : 2},
+	24 : {"x" : 5251, "y" : 3843, "z" : -3},
+	25 : {"x" : 5272, "y" : 3838, "z" : 0},
+	26 : {"x" : 5287, "y" : 3842, "z" : 3},
+	27 : {"x" : 5264, "y" : 3872, "z" : 2},
+	28 : {"x" : 5250, "y" : 3892, "z" : 1},
+	29 : {"x" : 5237, "y" : 3886, "z" : 32},
+	30 : {"x" : 5217, "y" : 3892, "z" : 32},
+	31 : {"x" : 5219, "y" : 3879, "z" : 32},
+};
+
+function Autostart()
+{
+	while(!Player.Dead())
+	{		
+		for (var _point in points)
+		{		
+			while(!Orion.WalkTo(points[_point].x, points[_point].y, 0, 1))	
+			{
+				Orion.WalkTo(points[_point].x, points[_point].y, 0, 1);
+				Orion.Wait(1000);
+				Orion.Print("["+_point+"]Walking...");
+			}
+
+			var _targets = Orion.FindType(config["taming_type"], 0xFFFF, "ground", "", 15);
+			if(!_targets.length)
+			{
+				continue;
+			}
+			else
+			{
+				Orion.Print("[i] Total targets found: "+_targets.length);
+
+				_targets.forEach(function(_target){	
+					var _try = 0;					
+					if(tame(_target) != 0)
+					{
+						while(tame(_target) != 2)
+						{
+							// For "mixed" types of animals ( skill required > base for that type of mobs )
+							_try++;
+							Orion.Print("Try #"+_try);
+							if(_try > 15)
+								return;
+							//
+							Orion.Print("Taming "+_target);
+							Orion.Wait(1000);
+						}			
+						release(_target);
+						kill(_target);							
+					}
+					else
+					{
+						return;
+					}
+				});
+			}
+		}
+		Orion.Print("[i] Waiting for "+config["wait_minutes"]+" minutes");
+		Orion.Wait(1000*60*config["wait_minutes"]);
+	}
+	
+}
+
+function tame(_serial)
+{	
+	Orion.WarMode(false);
+	Orion.ClearJournal();	   
+    var _target = Orion.FindObject(_serial);
+    if(_target != null)
+    {
+    	Orion.WaitTargetObject(_target.Serial()); 
+
+        if(Orion.WalkTo(_target.X(), _target.Y(), _target.Z(), 1))
+        {
+        	var _timeout = Orion.Now() + 1000*60*config["wait_minutes"];
+
+	        Orion.UseSkill("Animal Taming");    	    
+	        while(Orion.InJournal('master|chance|fail|challenging|already|far|cannot') == null)
+	        {    	
+	        	if(Orion.Now() > _timeout)
+	        	{
+	        		Orion.Print("Timeout exceeded");
+	        		return 0;
+	        	}
+	        	Orion.WalkTo(_target.X(), _target.Y(), _target.Z(), 1);
+	        	Orion.Wait(100);	
+	        }        
+	        Orion.CharPrint(self, 1153, "Finished");
+	    }
+	    else
+	    {
+	    	Orion.Ignore(_serial);
+	    	return 0;
+	    }
+    }
+    else
+    {
+    	Orion.Print("Returned 0");
+    	Orion.Ignore(_serial);
+    	return 0;
+    }
+    return _target.Notoriety();
+}
+
+function release(_serial)
+{
+	var _target = Orion.FindObject(_serial);
+	//Notoriety 2 == tamed
+	if(_target != null)
+	{
+		while(Orion.FindObject(_serial).Notoriety() == 2)
+		{
+			Orion.WaitGump(Orion.CreateGumpHook(2));
+			Orion.Wait(1000);
+		    Orion.Say(_target.Name()+" release");    
+		    Orion.Wait(1000);
+		}
+	}
+}
+
+function kill(_serial)
+{	
+	//
+	Orion.WaitTargetObject(_serial);
+	Orion.InvokeVirture('Honor');    	
+	Orion.Wait(1000);
+	//
+	while(Orion.FindObject(_serial) != null)
+	{		
+		Orion.Attack(_serial);
+    	Orion.Wait(1000);	
+    }
+}

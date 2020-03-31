@@ -340,3 +340,14 @@ function complete_quests()
 		});	
 	}
 }
+
+//trainHiding
+function trainHiding() {
+    const skillValueGoal = 1000;
+    const useSkillDelay = 10250;
+	Orion.Print(Orion.SkillValue('hiding', 'real')+" Should be < "+skillValueGoal +" to start"); 
+    while (Orion.SkillValue('hiding', 'real') < skillValueGoal) {
+        Orion.UseSkill('hiding');
+        Orion.Wait(useSkillDelay);
+    }
+}
